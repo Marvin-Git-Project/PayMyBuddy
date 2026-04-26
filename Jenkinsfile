@@ -59,15 +59,12 @@ pipeline {
             }
         }
 
-        // Étape 3 : Compilation, packaging et push sur Docker Hub
+        // Étape 3 : Compilation Maven puis build et push Docker Hub
+        // On utilise agent any car Docker est disponible sur le nœud Jenkins
+        // et non dans le container Maven
         // -------------------------------------------------------
         stage('Build & Push') {
-            agent {
-                docker {
-                    image 'maven:3.9.6-amazoncorretto-17'
-                    args '-v /root/.m2:/root/.m2 -v /var/run/docker.sock:/var/run/docker.sock'
-                }
-            }
+            agent any
             environment {
                 DOCKERHUB_CREDENTIALS = credentials('dockerhub')
             }
@@ -86,9 +83,6 @@ pipeline {
                 branch 'main'
             }
             agent any
-            environment {
-                SSH_STAGING = credentials('ssh_staging')
-            }
             steps {
                 sshagent(['ssh_staging']) {
                     sh """
@@ -164,7 +158,7 @@ pipeline {
                 channel: "${SLACK_CHANNEL}",
                 color: 'good',
                 message: """
-                        *Pipeline réussie* — `${env.JOB_NAME}` #${env.BUILD_NUMBER}
+                    *Pipeline réussie* — `${env.JOB_NAME}` #${env.BUILD_NUMBER}
                     Branche : `${env.GIT_BRANCH}`
                     Durée   : ${currentBuild.durationString}
                     Détails : ${env.BUILD_URL}
@@ -176,7 +170,7 @@ pipeline {
                 channel: "${SLACK_CHANNEL}",
                 color: 'danger',
                 message: """
-                        *Pipeline échouée* — `${env.JOB_NAME}` #${env.BUILD_NUMBER}
+                    *Pipeline échouée* — `${env.JOB_NAME}` #${env.BUILD_NUMBER}
                     Branche : `${env.GIT_BRANCH}`
                     Durée   : ${currentBuild.durationString}
                     Détails : ${env.BUILD_URL}
