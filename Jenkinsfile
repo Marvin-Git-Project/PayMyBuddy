@@ -17,6 +17,7 @@ pipeline {
 
     stages {
 
+        
         // Étape 1 : Tests unitaires et d'intégration avec Maven
         // -------------------------------------------------------
         stage('Tests') {
@@ -36,6 +37,7 @@ pipeline {
             }
         }
 
+        
         // Étape 2 : Analyse qualité du code avec SonarCloud
         // -------------------------------------------------------
         stage('SonarCloud Analysis') {
@@ -59,23 +61,39 @@ pipeline {
             }
         }
 
-        // Étape 3 : Compilation Maven puis build et push Docker Hub
-        // On utilise agent any car Docker est disponible sur le nœud Jenkins
-        // et non dans le container Maven
+        
+        // Étape 3a : Compilation Maven dans un container Maven
+        // Le JAR produit est conservé dans le workspace partagé
         // -------------------------------------------------------
-        stage('Build & Push') {
+        stage('Package') {
+            agent {
+                docker {
+                    image 'maven:3.9.6-amazoncorretto-17'
+                    args '-v /root/.m2:/root/.m2'
+                }
+            }
+            steps {
+                sh 'mvn package -DskipTests'
+            }
+        }
+
+        
+        // Étape 3b : Build de l'image Docker et push sur Docker Hub
+        // Docker est disponible directement sur le nœud Jenkins
+        // -------------------------------------------------------
+        stage('Docker Build & Push') {
             agent any
             environment {
                 DOCKERHUB_CREDENTIALS = credentials('dockerhub')
             }
             steps {
-                sh 'mvn package -DskipTests'
                 sh "docker build -t ${DOCKER_ID}/${IMAGE_NAME}:${IMAGE_TAG} ."
                 sh "echo ${DOCKERHUB_CREDENTIALS_PSW} | docker login -u ${DOCKERHUB_CREDENTIALS_USR} --password-stdin"
                 sh "docker push ${DOCKER_ID}/${IMAGE_NAME}:${IMAGE_TAG}"
             }
         }
 
+        
         // Étape 4 : Déploiement en staging (branche main uniquement)
         // -------------------------------------------------------
         stage('Deploy to Staging') {
@@ -97,6 +115,7 @@ pipeline {
             }
         }
 
+        
         // Étape 5 : Validation du déploiement staging
         // -------------------------------------------------------
         stage('Validate Staging') {
@@ -112,6 +131,7 @@ pipeline {
             }
         }
 
+        
         // Étape 6 : Déploiement en production (branche main uniquement)
         // -------------------------------------------------------
         stage('Deploy to Production') {
@@ -133,6 +153,7 @@ pipeline {
             }
         }
 
+        
         // Étape 7 : Validation du déploiement production
         // -------------------------------------------------------
         stage('Validate Production') {
@@ -149,6 +170,7 @@ pipeline {
         }
     }
 
+    
     // Notification Slack envoyée en fin de pipeline
     // Le message varie selon le statut (succès ou échec)
     // -------------------------------------------------------
