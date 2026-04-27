@@ -6,7 +6,7 @@ pipeline {
         IMAGE_NAME     = "paymybuddy"
         IMAGE_TAG      = "latest"
         STAGING_HOST   = "35.180.87.90"
-        PROD_HOST      = "52.47.110.5"
+        PROD_HOST      = "13.38.7.133"
         SONAR_PROJECT  = "Marvin-Git-Project_PayMyBuddy"
         SONAR_ORG      = "marvin-git-project"
         SLACK_CHANNEL  = "#jenkins-notifications"
@@ -90,7 +90,6 @@ pipeline {
         }
 
         // Étape 4 : Déploiement en staging (branche main uniquement)
-        // L'app Spring Boot utilise H2 en mémoire car pas de MySQL sur les VMs
         // -------------------------------------------------------
         stage('Deploy to Staging') {
             when {
@@ -133,7 +132,6 @@ pipeline {
         }
 
         // Étape 6 : Déploiement en production (branche main uniquement)
-        // L'app Spring Boot utilise H2 en mémoire car pas de MySQL sur les VMs
         // -------------------------------------------------------
         stage('Deploy to Production') {
             when {
