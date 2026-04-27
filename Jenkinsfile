@@ -59,39 +59,44 @@ pipeline {
             }
         }
 
-        // Étape 3 : Compilation, packaging et push sur Docker Hub
+        // Étape 3a : Compilation Maven dans un container Maven
+        // Le JAR produit est conservé dans le workspace partagé
         // -------------------------------------------------------
-        stage('Build') {
+        stage('Package') {
             agent {
                 docker {
                     image 'maven:3.9.6-amazoncorretto-17'
                     args '-v /root/.m2:/root/.m2'
-                    }
+                }
             }
             steps {
                 sh 'mvn package -DskipTests'
             }
         }
 
+        // Étape 3b : Build de l'image Docker et push sur Docker Hub
+        // Les credentials Docker Hub sont injectés via Jenkins
+        // -------------------------------------------------------
         stage('Docker Build & Push') {
             agent any
+            environment {
+                DOCKERHUB_CREDENTIALS = credentials('dockerhub')
+            }
             steps {
-                sh 'docker build -t ${DOCKER_ID}/${IMAGE_NAME}:${IMAGE_TAG} .'
-                sh 'echo ${DOCKERHUB_CREDENTIALS_PSW} | docker login -u ${DOCKERHUB_CREDENTIALS_USR} --password-stdin'
-                sh 'docker push ${DOCKER_ID}/${IMAGE_NAME}:${IMAGE_TAG}'
+                sh "docker build -t ${DOCKER_ID}/${IMAGE_NAME}:${IMAGE_TAG} ."
+                sh "echo ${DOCKERHUB_CREDENTIALS_PSW} | docker login -u ${DOCKERHUB_CREDENTIALS_USR} --password-stdin"
+                sh "docker push ${DOCKER_ID}/${IMAGE_NAME}:${IMAGE_TAG}"
             }
         }
 
         // Étape 4 : Déploiement en staging (branche main uniquement)
+        // MySQL est installé directement sur la VM staging
         // -------------------------------------------------------
         stage('Deploy to Staging') {
             when {
                 branch 'main'
             }
             agent any
-            environment {
-                SSH_STAGING = credentials('ssh_staging')
-            }
             steps {
                 sshagent(['ssh_staging']) {
                     sh """
@@ -99,7 +104,12 @@ pipeline {
                             docker pull ${DOCKER_ID}/${IMAGE_NAME}:${IMAGE_TAG} &&
                             docker stop ${IMAGE_NAME} || true &&
                             docker rm ${IMAGE_NAME} || true &&
-                            docker run -d --name ${IMAGE_NAME} -p 80:8080 ${DOCKER_ID}/${IMAGE_NAME}:${IMAGE_TAG}
+                            docker run -d --name ${IMAGE_NAME} -p 8080:8080 \
+                                --network host \
+                                -e SPRING_DATASOURCE_URL=jdbc:mysql://localhost:3306/db_paymybuddy \
+                                -e SPRING_DATASOURCE_USERNAME=root \
+                                -e SPRING_DATASOURCE_PASSWORD=password \
+                                ${DOCKER_ID}/${IMAGE_NAME}:${IMAGE_TAG}
                         '
                     """
                 }
@@ -107,6 +117,7 @@ pipeline {
         }
 
         // Étape 5 : Validation du déploiement staging
+        // Vérifie que l'application répond bien sur le port 8080
         // -------------------------------------------------------
         stage('Validate Staging') {
             when {
@@ -115,13 +126,14 @@ pipeline {
             agent any
             steps {
                 sh """
-                    sleep 10
-                    curl -f http://${STAGING_HOST} || exit 1
+                    sleep 20
+                    curl -f http://${STAGING_HOST}:8080 || exit 1
                 """
             }
         }
 
         // Étape 6 : Déploiement en production (branche main uniquement)
+        // MySQL est installé directement sur la VM production
         // -------------------------------------------------------
         stage('Deploy to Production') {
             when {
@@ -135,7 +147,12 @@ pipeline {
                             docker pull ${DOCKER_ID}/${IMAGE_NAME}:${IMAGE_TAG} &&
                             docker stop ${IMAGE_NAME} || true &&
                             docker rm ${IMAGE_NAME} || true &&
-                            docker run -d --name ${IMAGE_NAME} -p 80:8080 ${DOCKER_ID}/${IMAGE_NAME}:${IMAGE_TAG}
+                            docker run -d --name ${IMAGE_NAME} -p 8080:8080 \
+                                --network host \
+                                -e SPRING_DATASOURCE_URL=jdbc:mysql://localhost:3306/db_paymybuddy \
+                                -e SPRING_DATASOURCE_USERNAME=root \
+                                -e SPRING_DATASOURCE_PASSWORD=password \
+                                ${DOCKER_ID}/${IMAGE_NAME}:${IMAGE_TAG}
                         '
                     """
                 }
@@ -143,6 +160,7 @@ pipeline {
         }
 
         // Étape 7 : Validation du déploiement production
+        // Vérifie que l'application répond bien sur le port 8080
         // -------------------------------------------------------
         stage('Validate Production') {
             when {
@@ -151,8 +169,8 @@ pipeline {
             agent any
             steps {
                 sh """
-                    sleep 10
-                    curl -f http://${PROD_HOST} || exit 1
+                    sleep 20
+                    curl -f http://${PROD_HOST}:8080 || exit 1
                 """
             }
         }
@@ -167,7 +185,7 @@ pipeline {
                 channel: "${SLACK_CHANNEL}",
                 color: 'good',
                 message: """
-                        *Pipeline réussie* — `${env.JOB_NAME}` #${env.BUILD_NUMBER}
+                    *Pipeline réussie* — `${env.JOB_NAME}` #${env.BUILD_NUMBER}
                     Branche : `${env.GIT_BRANCH}`
                     Durée   : ${currentBuild.durationString}
                     Détails : ${env.BUILD_URL}
@@ -179,7 +197,7 @@ pipeline {
                 channel: "${SLACK_CHANNEL}",
                 color: 'danger',
                 message: """
-                        *Pipeline échouée* — `${env.JOB_NAME}` #${env.BUILD_NUMBER}
+                    *Pipeline échouée* — `${env.JOB_NAME}` #${env.BUILD_NUMBER}
                     Branche : `${env.GIT_BRANCH}`
                     Durée   : ${currentBuild.durationString}
                     Détails : ${env.BUILD_URL}
