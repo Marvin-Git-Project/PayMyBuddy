@@ -6,7 +6,7 @@ pipeline {
         IMAGE_NAME     = "paymybuddy"
         IMAGE_TAG      = "latest"
         STAGING_HOST   = "35.180.87.90"
-        PROD_HOST      = "52.47.110.5"
+        PROD_HOST      = "13.38.7.133"
         SONAR_PROJECT  = "Marvin-Git-Project_PayMyBuddy"
         SONAR_ORG      = "marvin-git-project"
         SLACK_CHANNEL  = "#jenkins-notifications"
