@@ -62,10 +62,12 @@ pipeline {
         // Étape 3 : Compilation, packaging et push sur Docker Hub
         // -------------------------------------------------------
         stage('Build & Push') {
-            agent any
-            environment {
-                DOCKERHUB_CREDENTIALS = credentials('dockerhub')
-            }
+            agent {
+                docker {
+                    image 'maven:3.9.6-amazoncorretto-17'
+                    args '-v /root/.m2:/root/.m2'
+                    }
+                }
             steps {
                 sh 'mvn package -DskipTests'
                 sh 'docker build -t ${DOCKER_ID}/${IMAGE_NAME}:${IMAGE_TAG} .'
