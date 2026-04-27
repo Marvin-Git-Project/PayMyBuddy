@@ -65,6 +65,7 @@ pipeline {
             agent {
                 docker {
                     image 'maven:3.9.6-amazoncorretto-17'
+                    args '-v /root/.m2:/root/.m2'
                     }
             }
             steps {
@@ -73,11 +74,12 @@ pipeline {
         }
 
         stage('Docker Build & Push') {
+            agent any
             steps {
                 sh 'docker build -t ${DOCKER_ID}/${IMAGE_NAME}:${IMAGE_TAG} .'
                 sh 'echo ${DOCKERHUB_CREDENTIALS_PSW} | docker login -u ${DOCKERHUB_CREDENTIALS_USR} --password-stdin'
                 sh 'docker push ${DOCKER_ID}/${IMAGE_NAME}:${IMAGE_TAG}'
-                }
+            }
         }
 
         // Étape 4 : Déploiement en staging (branche main uniquement)
