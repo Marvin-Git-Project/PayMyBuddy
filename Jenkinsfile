@@ -90,6 +90,7 @@ pipeline {
         }
 
         // Étape 4 : Déploiement en staging (branche main uniquement)
+        // L'app Spring Boot utilise H2 en mémoire car pas de MySQL sur les VMs
         // -------------------------------------------------------
         stage('Deploy to Staging') {
             when {
@@ -103,7 +104,12 @@ pipeline {
                             docker pull ${DOCKER_ID}/${IMAGE_NAME}:${IMAGE_TAG} &&
                             docker stop ${IMAGE_NAME} || true &&
                             docker rm ${IMAGE_NAME} || true &&
-                            docker run -d --name ${IMAGE_NAME} -p 80:8080 ${DOCKER_ID}/${IMAGE_NAME}:${IMAGE_TAG}
+                            docker run -d --name ${IMAGE_NAME} -p 8080:8080 \
+                                -e SPRING_DATASOURCE_URL=jdbc:h2:mem:testdb \
+                                -e SPRING_DATASOURCE_USERNAME=sa \
+                                -e SPRING_DATASOURCE_PASSWORD= \
+                                -e SPRING_JPA_DATABASE_PLATFORM=org.hibernate.dialect.H2Dialect \
+                                ${DOCKER_ID}/${IMAGE_NAME}:${IMAGE_TAG}
                         '
                     """
                 }
@@ -120,13 +126,14 @@ pipeline {
             agent any
             steps {
                 sh """
-                    sleep 10
+                    sleep 15
                     curl -f http://${STAGING_HOST}:8080 || exit 1
                 """
             }
         }
 
         // Étape 6 : Déploiement en production (branche main uniquement)
+        // L'app Spring Boot utilise H2 en mémoire car pas de MySQL sur les VMs
         // -------------------------------------------------------
         stage('Deploy to Production') {
             when {
@@ -140,7 +147,12 @@ pipeline {
                             docker pull ${DOCKER_ID}/${IMAGE_NAME}:${IMAGE_TAG} &&
                             docker stop ${IMAGE_NAME} || true &&
                             docker rm ${IMAGE_NAME} || true &&
-                            docker run -d --name ${IMAGE_NAME} -p 80:8080 ${DOCKER_ID}/${IMAGE_NAME}:${IMAGE_TAG}
+                            docker run -d --name ${IMAGE_NAME} -p 8080:8080 \
+                                -e SPRING_DATASOURCE_URL=jdbc:h2:mem:testdb \
+                                -e SPRING_DATASOURCE_USERNAME=sa \
+                                -e SPRING_DATASOURCE_PASSWORD= \
+                                -e SPRING_JPA_DATABASE_PLATFORM=org.hibernate.dialect.H2Dialect \
+                                ${DOCKER_ID}/${IMAGE_NAME}:${IMAGE_TAG}
                         '
                     """
                 }
@@ -157,7 +169,7 @@ pipeline {
             agent any
             steps {
                 sh """
-                    sleep 10
+                    sleep 15
                     curl -f http://${PROD_HOST}:8080 || exit 1
                 """
             }
