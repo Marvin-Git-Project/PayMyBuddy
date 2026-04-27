@@ -17,7 +17,6 @@ pipeline {
 
     stages {
 
-        
         // Étape 1 : Tests unitaires et d'intégration avec Maven
         // -------------------------------------------------------
         stage('Tests') {
@@ -37,7 +36,6 @@ pipeline {
             }
         }
 
-        
         // Étape 2 : Analyse qualité du code avec SonarCloud
         // -------------------------------------------------------
         stage('SonarCloud Analysis') {
@@ -61,7 +59,6 @@ pipeline {
             }
         }
 
-        
         // Étape 3a : Compilation Maven dans un container Maven
         // Le JAR produit est conservé dans le workspace partagé
         // -------------------------------------------------------
@@ -77,7 +74,6 @@ pipeline {
             }
         }
 
-        
         // Étape 3b : Build de l'image Docker et push sur Docker Hub
         // Docker est disponible directement sur le nœud Jenkins
         // -------------------------------------------------------
@@ -93,7 +89,6 @@ pipeline {
             }
         }
 
-        
         // Étape 4 : Déploiement en staging (branche main uniquement)
         // -------------------------------------------------------
         stage('Deploy to Staging') {
@@ -115,8 +110,8 @@ pipeline {
             }
         }
 
-        
         // Étape 5 : Validation du déploiement staging
+        // Vérifie que l'application répond bien sur le port 8080
         // -------------------------------------------------------
         stage('Validate Staging') {
             when {
@@ -126,12 +121,11 @@ pipeline {
             steps {
                 sh """
                     sleep 10
-                    curl -f http://${STAGING_HOST} || exit 1
+                    curl -f http://${STAGING_HOST}:8080 || exit 1
                 """
             }
         }
 
-        
         // Étape 6 : Déploiement en production (branche main uniquement)
         // -------------------------------------------------------
         stage('Deploy to Production') {
@@ -153,8 +147,8 @@ pipeline {
             }
         }
 
-        
         // Étape 7 : Validation du déploiement production
+        // Vérifie que l'application répond bien sur le port 8080
         // -------------------------------------------------------
         stage('Validate Production') {
             when {
@@ -164,13 +158,12 @@ pipeline {
             steps {
                 sh """
                     sleep 10
-                    curl -f http://${PROD_HOST} || exit 1
+                    curl -f http://${PROD_HOST}:8080 || exit 1
                 """
             }
         }
     }
 
-    
     // Notification Slack envoyée en fin de pipeline
     // Le message varie selon le statut (succès ou échec)
     // -------------------------------------------------------
