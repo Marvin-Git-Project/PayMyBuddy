@@ -105,7 +105,8 @@ pipeline {
                             docker stop ${IMAGE_NAME} || true &&
                             docker rm ${IMAGE_NAME} || true &&
                             docker run -d --name ${IMAGE_NAME} -p 8080:8080 \
-                                -e SPRING_DATASOURCE_URL=jdbc:mysql://localhost:3306/db_paymybuddy \
+                                --add-host=host.docker.internal:host-gateway \
+                                -e SPRING_DATASOURCE_URL=jdbc:mysql://host.docker.internal:3306/db_paymybuddy \
                                 -e SPRING_DATASOURCE_USERNAME=root \
                                 -e SPRING_DATASOURCE_PASSWORD=password \
                                 ${DOCKER_ID}/${IMAGE_NAME}:${IMAGE_TAG}
@@ -147,7 +148,8 @@ pipeline {
                             docker stop ${IMAGE_NAME} || true &&
                             docker rm ${IMAGE_NAME} || true &&
                             docker run -d --name ${IMAGE_NAME} -p 8080:8080 \
-                                -e SPRING_DATASOURCE_URL=jdbc:mysql://localhost:3306/db_paymybuddy \
+                                --add-host=host.docker.internal:host-gateway \
+                                -e SPRING_DATASOURCE_URL=jdbc:mysql://host.docker.internal:3306/db_paymybuddy \
                                 -e SPRING_DATASOURCE_USERNAME=root \
                                 -e SPRING_DATASOURCE_PASSWORD=password \
                                 ${DOCKER_ID}/${IMAGE_NAME}:${IMAGE_TAG}
