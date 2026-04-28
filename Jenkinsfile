@@ -90,7 +90,7 @@ pipeline {
         }
 
         // Étape 4 : Déploiement en staging (branche main uniquement)
-        // MySQL est installé directement sur la VM staging
+        // L'option --add-host permet au container d'accéder à MySQL sur la VM hôte
         // -------------------------------------------------------
         stage('Deploy to Staging') {
             when {
@@ -105,8 +105,8 @@ pipeline {
                             docker stop ${IMAGE_NAME} || true &&
                             docker rm ${IMAGE_NAME} || true &&
                             docker run -d --name ${IMAGE_NAME} -p 8080:8080 \
-                                --network host \
-                                -e SPRING_DATASOURCE_URL=jdbc:mysql://localhost:3306/db_paymybuddy \
+                                --add-host=host.docker.internal:host-gateway \
+                                -e SPRING_DATASOURCE_URL=jdbc:mysql://host.docker.internal:3306/db_paymybuddy \
                                 -e SPRING_DATASOURCE_USERNAME=root \
                                 -e SPRING_DATASOURCE_PASSWORD=password \
                                 ${DOCKER_ID}/${IMAGE_NAME}:${IMAGE_TAG}
@@ -133,7 +133,7 @@ pipeline {
         }
 
         // Étape 6 : Déploiement en production (branche main uniquement)
-        // MySQL est installé directement sur la VM production
+        // L'option --add-host permet au container d'accéder à MySQL sur la VM hôte
         // -------------------------------------------------------
         stage('Deploy to Production') {
             when {
@@ -148,8 +148,8 @@ pipeline {
                             docker stop ${IMAGE_NAME} || true &&
                             docker rm ${IMAGE_NAME} || true &&
                             docker run -d --name ${IMAGE_NAME} -p 8080:8080 \
-                                --network host \
-                                -e SPRING_DATASOURCE_URL=jdbc:mysql://localhost:3306/db_paymybuddy \
+                                --add-host=host.docker.internal:host-gateway \
+                                -e SPRING_DATASOURCE_URL=jdbc:mysql://host.docker.internal:3306/db_paymybuddy \
                                 -e SPRING_DATASOURCE_USERNAME=root \
                                 -e SPRING_DATASOURCE_PASSWORD=password \
                                 ${DOCKER_ID}/${IMAGE_NAME}:${IMAGE_TAG}
