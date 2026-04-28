@@ -75,7 +75,7 @@ pipeline {
         }
 
         // Étape 3b : Build de l'image Docker et push sur Docker Hub
-        // Docker est disponible directement sur le nœud Jenkins
+        // Les credentials Docker Hub sont injectés via Jenkins
         // -------------------------------------------------------
         stage('Docker Build & Push') {
             agent any
@@ -90,6 +90,7 @@ pipeline {
         }
 
         // Étape 4 : Déploiement en staging (branche main uniquement)
+        // L'option --add-host permet au container d'accéder à MySQL sur la VM hôte
         // -------------------------------------------------------
         stage('Deploy to Staging') {
             when {
@@ -125,13 +126,14 @@ pipeline {
             agent any
             steps {
                 sh """
-                    sleep 15
+                    sleep 20
                     curl -f http://${STAGING_HOST}:8080 || exit 1
                 """
             }
         }
 
         // Étape 6 : Déploiement en production (branche main uniquement)
+        // L'option --add-host permet au container d'accéder à MySQL sur la VM hôte
         // -------------------------------------------------------
         stage('Deploy to Production') {
             when {
@@ -167,7 +169,7 @@ pipeline {
             agent any
             steps {
                 sh """
-                    sleep 15
+                    sleep 20
                     curl -f http://${PROD_HOST}:8080 || exit 1
                 """
             }
