@@ -53,7 +53,7 @@
 
 ---
 
-## 🛠️ Stack technique
+## Stack technique
 
 | Outil | Rôle | Version |
 |---|---|---|
